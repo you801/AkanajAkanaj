@@ -71,9 +71,9 @@ end
 
 createToggle(20, "ESP", function(state) ESPEnabled = state end)
 createToggle(60, "Aimbot", function(state) AimbotEnabled = state end)
-createToggle(100, "No Recoil", function(state) NoRecoilEnabled = state end)
+createToggle(100, "Sem Recuo", function(state) NoRecoilEnabled = state end)
 createToggle(140, "FOV", function(state) FOVSize = state and 150 or 0 end)
-createToggle(180, "Anti-Lag", function(state) 
+createToggle(180, "Anti-Lag", function(state)
     AntiLagEnabled = state
     if AntiLagEnabled then
         for _, obj in pairs(workspace:GetDescendants()) do
@@ -89,7 +89,7 @@ createToggle(180, "Anti-Lag", function(state)
     end
 end)
 
--- Toggle do painel com a tecla Insert
+-- Alternar painel com tecla Insert
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not gameProcessed and input.KeyCode == Enum.KeyCode.Insert then
         PanelVisible = not PanelVisible
@@ -113,83 +113,33 @@ RunService.RenderStepped:Connect(function()
     FOVCircle.Visible = (FOVSize > 0)
 end)
 
--- Criar ESP
+-- Criar ESP que se atualiza corretamente
 local function CreateESP(player)
     if player == LocalPlayer or ESPs[player] then return end
+    print("Criando ESP para:", player.Name) -- Debug
 
-    local highlight = Instance.new("Highlight")
-    highlight.FillColor = Color3.fromRGB(255, 0, 0)
-    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    
-    player.CharacterAdded:Connect(function(char)
-        highlight.Parent = char
-    end)
-    
-    if player.Character then
-        highlight.Parent = player.Character
+    local function ApplyESP(character)
+        if not character then return end
+        local highlight = Instance.new("Highlight")
+        highlight.FillColor = Color3.fromRGB(255, 0, 0)
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        highlight.Parent = character
+        ESPs[player] = highlight
     end
 
-    ESPs[player] = highlight
+    if player.Character then
+        ApplyESP(player.Character)
+    end
+
+    player.CharacterAdded:Connect(ApplyESP)
 end
 
 local function UpdateESP()
     if not ESPEnabled then return end
-
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
+        if player ~= LocalPlayer then
             if not ESPs[player] then
                 CreateESP(player)
-            end
-        end
-    end
-end
-
--- Melhor Aimbot
-local function GetClosestPlayer()
-    local closestPlayer = nil
-    local shortestDistance = FOVSize
-
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local Head = player.Character:FindFirstChild("Head")
-            if Head then
-                local ScreenPosition, OnScreen = Camera:WorldToViewportPoint(Head.Position)
-
-                if OnScreen then
-                    local MousePos = UserInputService:GetMouseLocation()
-                    local Distance = (Vector2.new(ScreenPosition.X, ScreenPosition.Y) - MousePos).Magnitude
-
-                    if Distance < shortestDistance then
-                        closestPlayer = Head.Position
-                        shortestDistance = Distance
-                    end
-                end
-            end
-        end
-    end
-    return closestPlayer
-end
-
-RunService.RenderStepped:Connect(function()
-    UpdateESP()
-
-    if AimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-        local targetPos = GetClosestPlayer()
-        if targetPos then
-            local newCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-            local lerpSpeed = math.clamp(0.2 * AimSmoothness, 0.05, 0.7)
-            Camera.CFrame = Camera.CFrame:Lerp(newCFrame, lerpSpeed)
-        end
-    end
-end)
-
--- No Recoil
-RunService.RenderStepped:Connect(function()
-    if NoRecoilEnabled then
-        local gun = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildWhichIsA("Tool")
-        if gun and gun:FindFirstChild("Recoil") then
-            gun.Recoil.Value = 0
-        end
-    end
-end)
+            elseif not player.Character then
+                ESPs[player]:
