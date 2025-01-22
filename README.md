@@ -74,21 +74,6 @@ createToggle(20, "ESP", function(state) ESPEnabled = state end)
 createToggle(60, "Aimbot", function(state) AimbotEnabled = state end)
 createToggle(100, "Sem Recuo", function(state) NoRecoilEnabled = state end)
 createToggle(140, "FOV", function(state) FOVSize = state and 150 or 0 end)
-createToggle(180, "Anti-Lag", function(state)
-    AntiLagEnabled = state
-    if AntiLagEnabled then
-        for _, obj in pairs(workspace:GetDescendants()) do
-            if obj:IsA("Texture") or obj:IsA("Decal") then
-                obj:Destroy()
-            end
-        end
-        if not SkyRemoved and Lighting:FindFirstChildOfClass("Sky") then
-            Lighting:FindFirstChildOfClass("Sky"):Destroy()
-            SkyRemoved = true
-        end
-        Lighting.Ambient = Color3.new(0, 0, 0)
-    end
-end)
 
 -- Alternar painel com tecla Insert
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -119,7 +104,27 @@ local function CreateESP(player)
     player.CharacterAdded:Connect(ApplyESP)
 end
 
+-- Atualizar ESP para todos os jogadores
+for _, player in pairs(Players:GetPlayers()) do
+    CreateESP(player)
+end
 Players.PlayerAdded:Connect(CreateESP)
+
+-- Criar FOV visível
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+FOVCircle.Thickness = 1
+FOVCircle.NumSides = 50
+FOVCircle.Radius = FOVSize
+FOVCircle.Filled = false
+FOVCircle.Visible = true
+
+RunService.RenderStepped:Connect(function()
+    local MousePos = UserInputService:GetMouseLocation()
+    FOVCircle.Position = MousePos
+    FOVCircle.Radius = FOVSize
+    FOVCircle.Visible = (FOVSize > 0)
+end)
 
 -- Melhor Aimbot
 local function GetClosestPlayer()
