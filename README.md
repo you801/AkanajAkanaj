@@ -25,6 +25,7 @@ Frame.Position = UDim2.new(0.05, 0, 0.2, 0)
 Frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 Frame.BackgroundTransparency = 0.2
 Frame.BorderSizePixel = 0
+Frame.Visible = PanelVisible
 Frame.Parent = ScreenGui
 
 local function createToggle(yOffset, label, callback)
@@ -97,26 +98,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- Criar FOV visível
-local FOVCircle = Drawing.new("Circle")
-FOVCircle.Color = Color3.fromRGB(255, 255, 255)
-FOVCircle.Thickness = 1
-FOVCircle.NumSides = 50
-FOVCircle.Radius = FOVSize
-FOVCircle.Filled = false
-FOVCircle.Visible = true
-
-RunService.RenderStepped:Connect(function()
-    local MousePos = UserInputService:GetMouseLocation()
-    FOVCircle.Position = MousePos
-    FOVCircle.Radius = FOVSize
-    FOVCircle.Visible = (FOVSize > 0)
-end)
-
--- Criar ESP que se atualiza corretamente
+-- Criar ESP corretamente
 local function CreateESP(player)
     if player == LocalPlayer or ESPs[player] then return end
-    print("Criando ESP para:", player.Name) -- Debug
 
     local function ApplyESP(character)
         if not character then return end
@@ -135,11 +119,51 @@ local function CreateESP(player)
     player.CharacterAdded:Connect(ApplyESP)
 end
 
-local function UpdateESP()
-    if not ESPEnabled then return end
+Players.PlayerAdded:Connect(CreateESP)
+
+-- Melhor Aimbot
+local function GetClosestPlayer()
+    local closestPlayer = nil
+    local shortestDistance = FOVSize
+
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            if not ESPs[player] then
-                CreateESP(player)
-            elseif not player.Character then
-                ESPs[player]:
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local Head = player.Character:FindFirstChild("Head")
+            if Head then
+                local ScreenPosition, OnScreen = Camera:WorldToViewportPoint(Head.Position)
+
+                if OnScreen then
+                    local MousePos = UserInputService:GetMouseLocation()
+                    local Distance = (Vector2.new(ScreenPosition.X, ScreenPosition.Y) - MousePos).Magnitude
+
+                    if Distance < shortestDistance then
+                        closestPlayer = Head.Position
+                        shortestDistance = Distance
+                    end
+                end
+            end
+        end
+    end
+    return closestPlayer
+end
+
+RunService.RenderStepped:Connect(function()
+    if AimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+        local targetPos = GetClosestPlayer()
+        if targetPos then
+            local newCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+            local lerpSpeed = math.clamp(0.2 * AimSmoothness, 0.05, 0.7)
+            Camera.CFrame = Camera.CFrame:Lerp(newCFrame, lerpSpeed)
+        end
+    end
+end)
+
+-- Sem recuo
+RunService.RenderStepped:Connect(function()
+    if NoRecoilEnabled then
+        local weapon = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildWhichIsA("Tool")
+        if weapon and weapon:FindFirstChild("Recoil") then
+            weapon.Recoil.Value = 0
+        end
+    end
+end)
