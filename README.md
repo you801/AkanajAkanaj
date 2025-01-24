@@ -20,7 +20,7 @@ local Frame = Instance.new("Frame")
 Frame.Size = UDim2.new(0, 250, 0, 300)
 Frame.Position = UDim2.new(0.05, 0, 0.2, 0)
 Frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-Frame.BackgroundTransparency = 0.2
+Frame.BackgroundTransparency = 0.5  -- Agora está mais transparente
 Frame.BorderSizePixel = 0
 Frame.Visible = true
 Frame.Parent = ScreenGui
@@ -120,58 +120,46 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Criar o gráfico de massinha (barra que aumenta)
-local GraphBar = Instance.new("Frame")
-GraphBar.Size = UDim2.new(0, 200, 0, 10)
-GraphBar.Position = UDim2.new(0, 10, 0, 220)
-GraphBar.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-GraphBar.BackgroundTransparency = 0.5
-GraphBar.Parent = Frame
-GraphBar.Visible = false
+-- Criar Ranger (a caixa azul de alcance)
+local function CreateRanger(player)
+    if player == LocalPlayer then return end
+    
+    local ranger = Drawing.new("Square")
+    ranger.Color = Color3.fromRGB(0, 0, 255)  -- Azul
+    ranger.Thickness = 2
+    ranger.Visible = false
+    ranger.Filled = false
+    
+    -- Atualiza a visibilidade da ranger
+    player.CharacterAdded:Connect(function()
+        ranger.Visible = true
+    end)
 
--- Função para mostrar gráfico de massinha
-local function ShowGraphBar()
-    GraphBar.Visible = true
-    GraphBar:TweenSize(UDim2.new(0, 200, 0, 20), "Out", "Sine", 0.5, true)
+    return ranger
 end
 
-local function HideGraphBar()
-    GraphBar.Visible = false
-end
-
--- Função para alternar o gráfico de massinha com o painel
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and input.KeyCode == Enum.KeyCode.Insert then
-        if GraphBar.Visible then
-            HideGraphBar()  -- Esconde o gráfico
-        else
-            ShowGraphBar()  -- Mostra o gráfico
-        end
-    end
-end)
-
--- Melhor Rage Aimbot (Mira direto na cabeça)
-local function GetClosestPlayer()
-    local closestPlayer = nil
-
+-- Atualiza a posição e o tamanho da Ranger
+local function UpdateRanger()
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
-            return player.Character.Head.Position
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local position, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+            local ranger = CreateRanger(player)
+            if onScreen then
+                ranger.Position = Vector2.new(position.X - (ESPBoxSize / 2), position.Y - (ESPBoxSize / 2))
+                ranger.Size = Vector2.new(ESPBoxSize * 2, ESPBoxSize * 2)  -- Ajuste no tamanho
+                ranger.Visible = true
+            else
+                ranger.Visible = false
+            end
         end
     end
-    return nil
 end
 
 RunService.RenderStepped:Connect(function()
-    if RageAimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-        local targetPos = GetClosestPlayer()
-        if targetPos then
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-        end
-    end
+    UpdateRanger()
 end)
 
--- Criar ESP Box
+-- Criar ESP Box (Corrigido para não duplicar)
 local ESPs = {}
 
 local function CreateESP(player)
@@ -211,42 +199,6 @@ local function UpdateESP()
     end
 end
 
--- Criar Ranger (a caixa azul de alcance)
-local function CreateRanger(player)
-    if player == LocalPlayer then return end
-    
-    local ranger = Drawing.new("Square")
-    ranger.Color = Color3.fromRGB(0, 0, 255)  -- Azul
-    ranger.Thickness = 2
-    ranger.Visible = false
-    ranger.Filled = false
-    
-    -- Atualiza a visibilidade da ranger
-    player.CharacterAdded:Connect(function()
-        ranger.Visible = true
-    end)
-
-    return ranger
-end
-
--- Atualiza a posição e o tamanho da Ranger
-local function UpdateRanger()
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local position, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
-            local ranger = CreateRanger(player)
-            if onScreen then
-                ranger.Position = Vector2.new(position.X - (ESPBoxSize / 2), position.Y - (ESPBoxSize / 2))
-                ranger.Size = Vector2.new(ESPBoxSize * 2, ESPBoxSize * 2)  -- Ajuste no tamanho
-                ranger.Visible = true
-            else
-                ranger.Visible = false
-            end
-        end
-    end
-end
-
 RunService.RenderStepped:Connect(function()
     UpdateESP()
-    UpdateRanger()
 end)
