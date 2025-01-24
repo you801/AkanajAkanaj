@@ -1,57 +1,36 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local ESPs = {}
+local ESPEnabled = true
+local AimbotEnabled = true
+local NoRecoilEnabled = true
+local FOVSize = 150
+local AimSmoothness = 5
+local AntiLagEnabled = false
+local SkyRemoved = false
+local PanelVisible = true
+
+-- Criar GUI do Painel Futurista
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Parent = game.CoreGui
 
 local Frame = Instance.new("Frame")
 Frame.Size = UDim2.new(0, 250, 0, 250)
-Frame.Position = UDim2.new(0, 5, 0, 5)
+Frame.Position = UDim2.new(0.05, 0, 0.2, 0)
 Frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 Frame.BackgroundTransparency = 0.2
 Frame.BorderSizePixel = 0
 Frame.Parent = ScreenGui
-Frame.Visible = true  -- Inicialmente, o painel estará visível
 
--- Variável de controle de visibilidade
-local PainelVisivel = true
-
--- Função para alternar visibilidade do painel com a tecla Insert
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and input.KeyCode == Enum.KeyCode.Insert then
-        PainelVisivel = not PainelVisivel
-        Frame.Visible = PainelVisivel
-    end
-end)
-
--- Intentions - Ajustar a visibilidade do painel com a tecla Intent
-local function togglePanelVisibility(isVisible)
-    Frame.Visible = isVisible
-end
-
--- Função para mostrar a visibilidade do painel com Intenção
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed then
-        if input.KeyCode == Enum.KeyCode.I then  -- Usando a tecla I para visibilidade
-            togglePanelVisibility(true)  -- Torna o painel visível
-        elseif input.KeyCode == Enum.KeyCode.O then  -- Usando a tecla O para ocultar
-            togglePanelVisibility(false)  -- Torna o painel invisível
-        end
-    end
-end)
-
--- Aqui você pode adicionar outras funções para interações, como controles de ESP, Aimbot, etc.
-
--- Exemplo de Toggle de ESP
-local ESPEnabled = false
-local function toggleESP(state)
-    ESPEnabled = state
-    print("ESP Ativado: " .. tostring(state))
-end
-
--- Criar toggle de ESP no painel
-local function createESPButton(yOffset)
+local function createToggle(yOffset, label, callback)
     local toggleFrame = Instance.new("Frame")
     toggleFrame.Size = UDim2.new(0, 50, 0, 25)
-    toggleFrame.Position = UDim2.new(0, 75, 0, yOffset)
+    toggleFrame.Position = UDim2.new(0.75, -25, 0, yOffset)
     toggleFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     toggleFrame.BorderSizePixel = 0
     toggleFrame.Parent = Frame
@@ -65,7 +44,7 @@ local function createESPButton(yOffset)
     local textLabel = Instance.new("TextLabel")
     textLabel.Size = UDim2.new(0, 100, 0, 25)
     textLabel.Position = UDim2.new(0, 10, 0, yOffset)
-    textLabel.Text = "ESP"
+    textLabel.Text = label
     textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     textLabel.BackgroundTransparency = 1
     textLabel.TextSize = 16
@@ -85,10 +64,132 @@ local function createESPButton(yOffset)
                 toggleButton:TweenPosition(UDim2.new(0, 2, 0, 2), "Out", "Sine", 0.2, true)
                 toggleButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
             end
-            toggleESP(isActive)
+            callback(isActive)
         end
     end)
 end
 
--- Criar botão de ESP no painel
-createESPButton(20)
+createToggle(20, "ESP", function(state) ESPEnabled = state end)
+createToggle(60, "Aimbot", function(state) AimbotEnabled = state end)
+createToggle(100, "No Recoil", function(state) NoRecoilEnabled = state end)
+createToggle(140, "FOV", function(state) FOVSize = state and 150 or 0 end)
+createToggle(180, "Anti-Lag", function(state) 
+    AntiLagEnabled = state
+    if AntiLagEnabled then
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("Texture") or obj:IsA("Decal") then
+                obj:Destroy()
+            end
+        end
+        if not SkyRemoved and Lighting:FindFirstChildOfClass("Sky") then
+            Lighting:FindFirstChildOfClass("Sky"):Destroy()
+            SkyRemoved = true
+        end
+        Lighting.Ambient = Color3.new(0, 0, 0)
+    end
+end)
+
+-- Toggle do painel com a tecla Insert
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.Insert then
+        PanelVisible = not PanelVisible
+        Frame.Visible = PanelVisible
+    end
+end)
+
+-- Criar FOV visível
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+FOVCircle.Thickness = 1
+FOVCircle.NumSides = 50
+FOVCircle.Radius = FOVSize
+FOVCircle.Filled = false
+FOVCircle.Visible = true
+
+RunService.RenderStepped:Connect(function()
+    local MousePos = UserInputService:GetMouseLocation()
+    FOVCircle.Position = MousePos
+    FOVCircle.Radius = FOVSize
+    FOVCircle.Visible = (FOVSize > 0)
+end)
+
+-- Criar ESP
+local function CreateESP(player)
+    if player == LocalPlayer or ESPs[player] then return end
+
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = Color3.fromRGB(255, 0, 0)
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    
+    player.CharacterAdded:Connect(function(char)
+        highlight.Parent = char
+    end)
+    
+    if player.Character then
+        highlight.Parent = player.Character
+    end
+
+    ESPs[player] = highlight
+end
+
+local function UpdateESP()
+    if not ESPEnabled then return end
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            if not ESPs[player] then
+                CreateESP(player)
+            end
+        end
+    end
+end
+
+-- Melhor Aimbot
+local function GetClosestPlayer()
+    local closestPlayer = nil
+    local shortestDistance = FOVSize
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local Head = player.Character:FindFirstChild("Head")
+            if Head then
+                local ScreenPosition, OnScreen = Camera:WorldToViewportPoint(Head.Position)
+
+                if OnScreen then
+                    local MousePos = UserInputService:GetMouseLocation()
+                    local Distance = (Vector2.new(ScreenPosition.X, ScreenPosition.Y) - MousePos).Magnitude
+
+                    if Distance < shortestDistance then
+                        closestPlayer = Head.Position
+                        shortestDistance = Distance
+                    end
+                end
+            end
+        end
+    end
+    return closestPlayer
+end
+
+RunService.RenderStepped:Connect(function()
+    UpdateESP()
+
+    if AimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+        local targetPos = GetClosestPlayer()
+        if targetPos then
+            local newCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+            local lerpSpeed = math.clamp(0.2 * AimSmoothness, 0.05, 0.7)
+            Camera.CFrame = Camera.CFrame:Lerp(newCFrame, lerpSpeed)
+        end
+    end
+end)
+
+-- No Recoil
+RunService.RenderStepped:Connect(function()
+    if NoRecoilEnabled then
+        local gun = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildWhichIsA("Tool")
+        if gun and gun:FindFirstChild("Recoil") then
+            gun.Recoil.Value = 0
+        end
+    end
+end)
