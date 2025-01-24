@@ -1,33 +1,31 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local Lighting = game:GetService("Lighting")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
+local Drawing = Drawing or {}
 
-local ESPs = {}
 local ESPEnabled = true
-local AimbotEnabled = true
+local RageAimbotEnabled = false
 local NoRecoilEnabled = true
+local FOVEnabled = false
 local FOVSize = 150
-local AimSmoothness = 5
-local AntiLagEnabled = false
-local SkyRemoved = false
-local PanelVisible = true
+local ESPBoxSize = 50  -- Valor inicial da Box
 
 -- Criar GUI do Painel Futurista
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Parent = game.CoreGui
 
 local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 250, 0, 250)
+Frame.Size = UDim2.new(0, 250, 0, 300)
 Frame.Position = UDim2.new(0.05, 0, 0.2, 0)
 Frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 Frame.BackgroundTransparency = 0.2
 Frame.BorderSizePixel = 0
-Frame.Visible = PanelVisible
+Frame.Visible = true
 Frame.Parent = ScreenGui
 
+-- Função para criar toggle no painel
 local function createToggle(yOffset, label, callback)
     local toggleFrame = Instance.new("Frame")
     toggleFrame.Size = UDim2.new(0, 50, 0, 25)
@@ -59,10 +57,10 @@ local function createToggle(yOffset, label, callback)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             isActive = not isActive
             if isActive then
-                toggleButton:TweenPosition(UDim2.new(1, -22, 0, 2), "Out", "Sine", 0.2, true)
+                toggleButton.Position = UDim2.new(1, -22, 0, 2)
                 toggleButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
             else
-                toggleButton:TweenPosition(UDim2.new(0, 2, 0, 2), "Out", "Sine", 0.2, true)
+                toggleButton.Position = UDim2.new(0, 2, 0, 2)
                 toggleButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
             end
             callback(isActive)
@@ -71,104 +69,167 @@ local function createToggle(yOffset, label, callback)
 end
 
 createToggle(20, "ESP", function(state) ESPEnabled = state end)
-createToggle(60, "Aimbot", function(state) AimbotEnabled = state end)
+createToggle(60, "Rage Aimbot", function(state) RageAimbotEnabled = state end)
 createToggle(100, "Sem Recuo", function(state) NoRecoilEnabled = state end)
-createToggle(140, "FOV", function(state) FOVSize = state and 150 or 0 end)
+createToggle(140, "FOV", function(state) FOVEnabled = state end)
 
--- Alternar painel com tecla Insert
+-- Slider para ajustar o tamanho da Box ESP
+local Slider = Instance.new("TextLabel")
+Slider.Size = UDim2.new(0, 200, 0, 25)
+Slider.Position = UDim2.new(0, 10, 0, 180)
+Slider.Text = "Tamanho da Box ESP: " .. ESPBoxSize
+Slider.TextColor3 = Color3.fromRGB(255, 255, 255)
+Slider.BackgroundTransparency = 0.5
+Slider.Font = Enum.Font.SourceSansBold
+Slider.TextSize = 16
+Slider.Parent = Frame
+
+local function updateESPSize(value)
+    ESPBoxSize = math.clamp(value, 1, 100) -- Garante que fique entre 1% e 100%
+    Slider.Text = "Tamanho da Box ESP: " .. ESPBoxSize
+end
+
+-- Controle de ajuste via teclado
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and input.KeyCode == Enum.KeyCode.Insert then
-        PanelVisible = not PanelVisible
-        Frame.Visible = PanelVisible
+    if not gameProcessed then
+        if input.KeyCode == Enum.KeyCode.Left then
+            updateESPSize(ESPBoxSize - 5)  -- Diminuir tamanho
+        elseif input.KeyCode == Enum.KeyCode.Right then
+            updateESPSize(ESPBoxSize + 5)  -- Aumentar tamanho
+        end
     end
 end)
 
--- Criar ESP corretamente
-local function CreateESP(player)
-    if player == LocalPlayer or ESPs[player] then return end
-
-    local function ApplyESP(character)
-        if not character then return end
-        local highlight = Instance.new("Highlight")
-        highlight.FillColor = Color3.fromRGB(255, 0, 0)
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        highlight.Parent = character
-        ESPs[player] = highlight
-    end
-
-    if player.Character then
-        ApplyESP(player.Character)
-    end
-
-    player.CharacterAdded:Connect(ApplyESP)
-end
-
--- Atualizar ESP para todos os jogadores
-for _, player in pairs(Players:GetPlayers()) do
-    CreateESP(player)
-end
-Players.PlayerAdded:Connect(CreateESP)
-
--- Criar FOV visível
+-- Criar FOV Circle
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Color = Color3.fromRGB(255, 255, 255)
 FOVCircle.Thickness = 1
 FOVCircle.NumSides = 50
 FOVCircle.Radius = FOVSize
 FOVCircle.Filled = false
-FOVCircle.Visible = true
+FOVCircle.Visible = false
 
 RunService.RenderStepped:Connect(function()
-    local MousePos = UserInputService:GetMouseLocation()
-    FOVCircle.Position = MousePos
-    FOVCircle.Radius = FOVSize
-    FOVCircle.Visible = (FOVSize > 0)
+    if FOVEnabled then
+        local MousePos = UserInputService:GetMouseLocation()
+        FOVCircle.Position = MousePos
+        FOVCircle.Radius = FOVSize
+        FOVCircle.Visible = true
+    else
+        FOVCircle.Visible = false
+    end
 end)
 
--- Melhor Aimbot
-local function GetClosestPlayer()
-    local closestPlayer = nil
-    local shortestDistance = FOVSize
+-- Criar o gráfico de massinha (barra que aumenta)
+local GraphBar = Instance.new("Frame")
+GraphBar.Size = UDim2.new(0, 200, 0, 10)
+GraphBar.Position = UDim2.new(0, 10, 0, 220)
+GraphBar.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+GraphBar.BackgroundTransparency = 0.5
+GraphBar.Parent = Frame
+GraphBar.Visible = false
 
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local Head = player.Character:FindFirstChild("Head")
-            if Head then
-                local ScreenPosition, OnScreen = Camera:WorldToViewportPoint(Head.Position)
+-- Função para mostrar gráfico de massinha
+local function ShowGraphBar()
+    GraphBar.Visible = true
+    GraphBar:TweenSize(UDim2.new(0, 200, 0, 20), "Out", "Sine", 0.5, true)
+end
 
-                if OnScreen then
-                    local MousePos = UserInputService:GetMouseLocation()
-                    local Distance = (Vector2.new(ScreenPosition.X, ScreenPosition.Y) - MousePos).Magnitude
+local function HideGraphBar()
+    GraphBar.Visible = false
+end
 
-                    if Distance < shortestDistance then
-                        closestPlayer = Head.Position
-                        shortestDistance = Distance
-                    end
-                end
-            end
+-- Função para alternar o gráfico de massinha com o painel
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.Insert then
+        if GraphBar.Visible then
+            HideGraphBar()  -- Esconde o gráfico
+        else
+            ShowGraphBar()  -- Mostra o gráfico
         end
     end
-    return closestPlayer
+end)
+
+-- Melhor Rage Aimbot (Mira direto na cabeça)
+local function GetClosestPlayer()
+    local closestPlayer = nil
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+            return player.Character.Head.Position
+        end
+    end
+    return nil
 end
 
 RunService.RenderStepped:Connect(function()
-    if AimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+    if RageAimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
         local targetPos = GetClosestPlayer()
         if targetPos then
-            local newCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-            local lerpSpeed = math.clamp(0.2 * AimSmoothness, 0.05, 0.7)
-            Camera.CFrame = Camera.CFrame:Lerp(newCFrame, lerpSpeed)
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
         end
     end
 end)
 
--- Sem recuo
-RunService.RenderStepped:Connect(function()
-    if NoRecoilEnabled then
-        local weapon = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildWhichIsA("Tool")
-        if weapon and weapon:FindFirstChild("Recoil") then
-            weapon.Recoil.Value = 0
+-- Criar ESP Box
+local ESPs = {}
+
+local function CreateESP(player)
+    if player == LocalPlayer or ESPs[player] then return end
+
+    local box = Drawing.new("Square")
+    box.Color = Color3.fromRGB(255, 0, 0)
+    box.Thickness = 2
+    box.Visible = false
+
+    ESPs[player] = box
+
+    player.CharacterAdded:Connect(function(character)
+        box.Visible = true
+    end)
+end
+
+local function UpdateESP()
+    if not ESPEnabled then return end
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            if not ESPs[player] then
+                CreateESP(player)
+            end
+            local box = ESPs[player]
+            local position, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+
+            if onScreen then
+                box.Position = Vector2.new(position.X - (ESPBoxSize / 2), position.Y - (ESPBoxSize / 2))
+                box.Size = Vector2.new(ESPBoxSize, ESPBoxSize)
+                box.Visible = true
+            else
+                box.Visible = false
+            end
         end
     end
-end)
+end
+
+-- Criar Ranger (a caixa azul de alcance)
+local function CreateRanger(player)
+    if player == LocalPlayer then return end
+    
+    local ranger = Drawing.new("Square")
+    ranger.Color = Color3.fromRGB(0, 0, 255)  -- Azul
+    ranger.Thickness = 2
+    ranger.Visible = false
+    ranger.Filled = false
+    
+    -- Atualiza a visibilidade da ranger
+    player.CharacterAdded:Connect(function()
+        ranger.Visible = true
+    end)
+
+    return ranger
+end
+
+-- Atualiza a posição e o tamanho da Ranger
+local function UpdateRanger()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer
