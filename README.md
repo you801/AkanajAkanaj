@@ -73,19 +73,40 @@ createToggle(20, "ESP", function(state) ESPEnabled = state end)
 createToggle(60, "Aimbot", function(state) AimbotEnabled = state end)
 createToggle(100, "No Recoil", function(state) NoRecoilEnabled = state end)
 createToggle(140, "FOV", function(state) FOVSize = state and 150 or 0 end)
-createToggle(180, "Anti-Lag", function(state) 
+
+-- **Modo Massinha (Anti-Lag)**
+createToggle(180, "Massinha Mode", function(state) 
     AntiLagEnabled = state
     if AntiLagEnabled then
+        -- Remover texturas e decals
         for _, obj in pairs(workspace:GetDescendants()) do
             if obj:IsA("Texture") or obj:IsA("Decal") then
                 obj:Destroy()
             end
         end
+
+        -- Apagar o céu
         if not SkyRemoved and Lighting:FindFirstChildOfClass("Sky") then
             Lighting:FindFirstChildOfClass("Sky"):Destroy()
             SkyRemoved = true
         end
+
+        -- Ajustar configurações gráficas
         Lighting.Ambient = Color3.new(0, 0, 0)
+        Lighting.OutdoorAmbient = Color3.new(0, 0, 0)
+        Lighting.GlobalShadows = false
+        Lighting.FogEnd = 9e9
+        Lighting.Brightness = 0
+
+        -- Reduzir a qualidade dos objetos no mapa
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("Part") or v:IsA("MeshPart") then
+                v.Material = Enum.Material.Plastic
+                v.Reflectance = 0
+                v.Transparency = 0
+                v.Color = Color3.new(0.5, 0.5, 0.5) -- Cor padrão massinha
+            end
+        end
     end
 end)
 
@@ -177,19 +198,7 @@ RunService.RenderStepped:Connect(function()
     if AimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
         local targetPos = GetClosestPlayer()
         if targetPos then
-            local newCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-            local lerpSpeed = math.clamp(0.2 * AimSmoothness, 0.05, 0.7)
-            Camera.CFrame = Camera.CFrame:Lerp(newCFrame, lerpSpeed)
-        end
-    end
-end)
-
--- No Recoil
-RunService.RenderStepped:Connect(function()
-    if NoRecoilEnabled then
-        local gun = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildWhichIsA("Tool")
-        if gun and gun:FindFirstChild("Recoil") then
-            gun.Recoil.Value = 0
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
         end
     end
 end)
