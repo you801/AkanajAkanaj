@@ -10,7 +10,7 @@ local ESPEnabled = true
 local AimbotEnabled = false
 local NoRecoilEnabled = true
 local FOVSize = 150
-local AimSmoothness = 1 -- Agora o aimbot é instantâneo (sem suavização)
+local AimSmoothness = 1
 local AntiLagEnabled = false
 local SkyRemoved = false
 local PanelVisible = true
@@ -147,7 +147,7 @@ end
 
 RunService.RenderStepped:Connect(UpdateESP)
 
--- *Aimbot Melhorado com Botão Direito*
+-- *Aimbot com Botão Direito para Ativar*
 local function GetClosestPlayer()
     local closestPlayer = nil
     local shortestDistance = FOVSize
@@ -162,7 +162,7 @@ local function GetClosestPlayer()
                 local Distance = (Vector2.new(ScreenPosition.X, ScreenPosition.Y) - MousePos).Magnitude
 
                 if Distance < shortestDistance then
-                    closestPlayer = Head.Position -- Agora mira diretamente na cabeça
+                    closestPlayer = Head.Position -- Mira diretamente na cabeça
                     shortestDistance = Distance
                 end
             end
@@ -189,12 +189,12 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 RunService.RenderStepped:Connect(function()
-    if not AimbotEnabled or not rightMouseDown then return end -- Aimbot só funciona com o botão direito pressionado
-    
-    local targetPosition = GetClosestPlayer()
-    
-    if targetPosition then
-        -- Mira instantaneamente
-        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPosition)
+    if AimbotEnabled and rightMouseDown then
+        local targetPosition = GetClosestPlayer()
+        
+        if targetPosition then
+            -- Mira instantaneamente para o alvo
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPosition)
+        end
     end
 end)
