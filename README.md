@@ -147,7 +147,7 @@ end
 
 RunService.RenderStepped:Connect(UpdateESP)
 
--- *Aimbot Melhorado (Mira Instantânea)*
+-- *Aimbot Melhorado com Botão Direito*
 local function GetClosestPlayer()
     local closestPlayer = nil
     local shortestDistance = FOVSize
@@ -171,8 +171,25 @@ local function GetClosestPlayer()
     return closestPlayer
 end
 
+-- Flag para verificar se o botão direito está pressionado
+local rightMouseDown = false
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then -- Botão direito
+        rightMouseDown = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then -- Botão direito
+        rightMouseDown = false
+    end
+end)
+
 RunService.RenderStepped:Connect(function()
-    if not AimbotEnabled then return end
+    if not AimbotEnabled or not rightMouseDown then return end -- Aimbot só funciona com o botão direito pressionado
     
     local targetPosition = GetClosestPlayer()
     
