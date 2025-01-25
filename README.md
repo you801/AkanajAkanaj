@@ -5,14 +5,38 @@ local Lighting = game:GetService("Lighting")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
+local ESPs = {}
 local ESPEnabled = true
 local AimbotEnabled = true
 local NoRecoilEnabled = true
 local FOVSize = 150
 local AimSmoothness = 5
+local AntiLagEnabled = false
+local SkyRemoved = false
 local PanelVisible = true
 
--- Criar GUI do Painel
+-- *Anti-LSG / Anti-Lag*
+local function removeTexturesFromObject(obj)
+    for _, descendant in pairs(obj:GetDescendants()) do
+        if descendant:IsA("Texture") or descendant:IsA("Decal") then
+            if not descendant.Parent:IsA("Tool") then -- Não remove texturas de armas
+                descendant:Destroy()
+            end
+        end
+    end
+end
+
+local function removeTexturesFromAllObjects()
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("Tool") then
+            -- Não remove texturas de armas
+        elseif obj:IsA("MeshPart") or obj:IsA("Part") then
+            removeTexturesFromObject(obj)
+        end
+    end
+end
+
+-- *Painel Futurista*
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Parent = game.CoreGui
 
@@ -24,26 +48,45 @@ Frame.BackgroundTransparency = 0.2
 Frame.BorderSizePixel = 0
 Frame.Parent = ScreenGui
 
--- Criar botão de alternância (Toggle)
 local function createToggle(yOffset, label, callback)
-    local toggleButton = Instance.new("TextButton")
-    toggleButton.Size = UDim2.new(0, 100, 0, 25)
-    toggleButton.Position = UDim2.new(0.1, 0, 0, yOffset)
-    toggleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    toggleButton.Text = label
-    toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    toggleButton.Parent = Frame
+    local toggleFrame = Instance.new("Frame")
+    toggleFrame.Size = UDim2.new(0, 50, 0, 25)
+    toggleFrame.Position = UDim2.new(0.75, -25, 0, yOffset)
+    toggleFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    toggleFrame.BorderSizePixel = 0
+    toggleFrame.Parent = Frame
+
+    local toggleButton = Instance.new("Frame")
+    toggleButton.Size = UDim2.new(0, 20, 0, 20)
+    toggleButton.Position = UDim2.new(0, 2, 0, 2)
+    toggleButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    toggleButton.Parent = toggleFrame
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(0, 100, 0, 25)
+    textLabel.Position = UDim2.new(0, 10, 0, yOffset)
+    textLabel.Text = label
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textLabel.BackgroundTransparency = 1
+    textLabel.TextSize = 16
+    textLabel.Font = Enum.Font.SourceSansBold
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.Parent = Frame
 
     local isActive = false
 
-    toggleButton.MouseButton1Click:Connect(function()
-        isActive = not isActive
-        if isActive then
-            toggleButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-        else
-            toggleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    toggleFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isActive = not isActive
+            if isActive then
+                toggleButton:TweenPosition(UDim2.new(1, -22, 0, 2), "Out", "Sine", 0.2, true)
+                toggleButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+            else
+                toggleButton:TweenPosition(UDim2.new(0, 2, 0, 2), "Out", "Sine", 0.2, true)
+                toggleButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+            end
+            callback(isActive)
         end
-        callback(isActive)
     end)
 end
 
@@ -51,8 +94,24 @@ createToggle(20, "ESP", function(state) ESPEnabled = state end)
 createToggle(60, "Aimbot", function(state) AimbotEnabled = state end)
 createToggle(100, "No Recoil", function(state) NoRecoilEnabled = state end)
 createToggle(140, "FOV", function(state) FOVSize = state and 150 or 0 end)
+createToggle(180, "Anti-Lag", function(state)
+    AntiLagEnabled = state
+    if AntiLagEnabled then
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("Texture") or obj:IsA("Decal") then
+                obj:Destroy()
+            end
+        end
+        if not SkyRemoved and Lighting:FindFirstChildOfClass("Sky") then
+            Lighting:FindFirstChildOfClass("Sky"):Destroy()
+            SkyRemoved = true
+        end
+        Lighting.Ambient = Color3.new(0, 0, 0)
+        removeTexturesFromAllObjects()
+    end
+end)
 
--- Alternar painel com tecla Insert
+-- *Tecla para alternar o painel*
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not gameProcessed and input.KeyCode == Enum.KeyCode.Insert then
         PanelVisible = not PanelVisible
@@ -60,7 +119,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- Criar Círculo de FOV
+-- *Criar FOV visível*
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Color = Color3.fromRGB(255, 255, 255)
 FOVCircle.Thickness = 1
@@ -76,38 +135,39 @@ RunService.RenderStepped:Connect(function()
     FOVCircle.Visible = (FOVSize > 0)
 end)
 
--- Criar ESP para jogadores
+-- *Criar ESP*
 local function CreateESP(player)
-    if player == LocalPlayer then return end
+    if player == LocalPlayer or ESPs[player] then return end
 
     local highlight = Instance.new("Highlight")
     highlight.FillColor = Color3.fromRGB(255, 0, 0)
     highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-
+    
     player.CharacterAdded:Connect(function(char)
         highlight.Parent = char
     end)
-
+    
     if player.Character then
         highlight.Parent = player.Character
     end
+
+    ESPs[player] = highlight
 end
 
--- Ativar ESP para todos os jogadores
 local function UpdateESP()
     if not ESPEnabled then return end
 
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
-            CreateESP(player)
+            if not ESPs[player] then
+                CreateESP(player)
+            end
         end
     end
 end
 
-RunService.RenderStepped:Connect(UpdateESP)
-
--- Aimbot
+-- *Aimbot Melhorado*
 local function GetClosestPlayer()
     local closestPlayer = nil
     local shortestDistance = FOVSize
@@ -115,15 +175,15 @@ local function GetClosestPlayer()
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
             local Head = player.Character.Head
-            local screenPosition, onScreen = Camera:WorldToViewportPoint(Head.Position)
+            local ScreenPosition, OnScreen = Camera:WorldToViewportPoint(Head.Position)
 
-            if onScreen then
-                local mousePos = UserInputService:GetMouseLocation()
-                local distance = (Vector2.new(screenPosition.X, screenPosition.Y) - mousePos).Magnitude
+            if OnScreen then
+                local MousePos = UserInputService:GetMouseLocation()
+                local Distance = (Vector2.new(ScreenPosition.X, ScreenPosition.Y) - MousePos).Magnitude
 
-                if distance < shortestDistance then
+                if Distance < shortestDistance then
                     closestPlayer = Head.Position
-                    shortestDistance = distance
+                    shortestDistance = Distance
                 end
             end
         end
@@ -131,23 +191,4 @@ local function GetClosestPlayer()
     return closestPlayer
 end
 
-RunService.RenderStepped:Connect(function()
-    if AimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-        local targetPos = GetClosestPlayer()
-        if targetPos then
-            local newCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-            local lerpSpeed = math.clamp(0.2 * AimSmoothness, 0.05, 0.7)
-            Camera.CFrame = Camera.CFrame:Lerp(newCFrame, lerpSpeed)
-        end
-    end
-end)
-
--- No Recoil
-RunService.RenderStepped:Connect(function()
-    if NoRecoilEnabled then
-        local weapon = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildWhichIsA("Tool")
-        if weapon and weapon:FindFirstChild("Recoil") then
-            weapon.Recoil.Value = 0
-        end
-    end
-end)
+RunService.RenderStepped:Connect(UpdateESP)
