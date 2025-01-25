@@ -1,4 +1,55 @@
-Jogadores locais = jogo:GetService("Jogadores")
+[01:59, 22/01/2025] João Lucas: local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local ESPs = {}
+local ESPEnabled = false
+local AimbotEnabled = false
+local NoRecoilEnabled = false
+local FOVSize = 150
+local AimSmoothness = 5
+local AntiLagEnabled = false
+local SkyRemoved = false
+local PanelVisible = true
+
+-- Criar GUI do Painel Futurista
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = game.CoreGui
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 250, 0, 250)
+Frame.Position = UDim2.new(0.05, 0, 0.2, 0)
+Frame.BackgroundColor3 = Color3.fromR…
+[02:32, 22/01/2025] Gabriel Armando: local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local ESPs = {}
+local ESPEnabled = true
+local AimbotEnabled = true
+local NoRecoilEnabled = true
+local FOVSize = 150
+local AimSmoothness = 5
+local AntiLagEnabled = false
+local SkyRemoved = false
+local PanelVisible = true
+
+-- Criar GUI do Painel Futurista
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = game.CoreGui
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 250, 0, 250)
+Frame.Position = UDim2.new(0.05, 0, 0.2, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(…
+[10:17, 22/01/2025] João Lucas: Olha o discord abobando
+[21:14, 24/01/2025] João Lucas: Jogadores locais = jogo:GetService("Jogadores")
 local RunService = jogo:GetService("RunService")
 local UserInputService = jogo:GetService("UserInputService")
 Iluminação local = jogo:GetService("Iluminação")
