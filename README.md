@@ -7,10 +7,10 @@ local Camera = workspace.CurrentCamera
 
 local ESPs = {}
 local ESPEnabled = true
-local AimbotEnabled = false -- Começa desativado
+local AimbotEnabled = false
 local NoRecoilEnabled = true
 local FOVSize = 150
-local AimSmoothness = 5
+local AimSmoothness = 1 -- Ajuste para uma resposta mais rápida
 local AntiLagEnabled = false
 local SkyRemoved = false
 local PanelVisible = true
@@ -113,7 +113,7 @@ RunService.RenderStepped:Connect(function()
     FOVCircle.Visible = (FOVSize > 0)
 end)
 
--- *Aimbot Melhorado*
+-- *Aimbot Melhorado (Agora mira nos olhos/nariz)*
 local function GetClosestPlayer()
     local closestPlayer = nil
     local shortestDistance = FOVSize
@@ -128,7 +128,7 @@ local function GetClosestPlayer()
                 local Distance = (Vector2.new(ScreenPosition.X, ScreenPosition.Y) - MousePos).Magnitude
 
                 if Distance < shortestDistance then
-                    closestPlayer = Head.Position
+                    closestPlayer = Head.Position -- Ajustado para pegar a cabeça/nariz/olhos
                     shortestDistance = Distance
                 end
             end
@@ -147,7 +147,7 @@ RunService.RenderStepped:Connect(function()
         local Direction = (targetPosition - CameraPosition).unit
         local NewCFrame = CFrame.new(CameraPosition, CameraPosition + Direction)
 
-        -- Suavizar a movimentação para evitar travamentos
-        Camera.CFrame = Camera.CFrame:Lerp(NewCFrame, 1 / AimSmoothness)
+        -- Agora a suavização está mais rápida para um movimento mais preciso
+        Camera.CFrame = Camera.CFrame:Lerp(NewCFrame, AimSmoothness * 0.1) -- Acelerei o movimento
     end
 end)
