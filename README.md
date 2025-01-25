@@ -10,7 +10,7 @@ local ESPEnabled = true
 local AimbotEnabled = false
 local NoRecoilEnabled = true
 local FOVSize = 150
-local AimSmoothness = 1 -- Ajuste para uma resposta mais rápida
+local AimSmoothness = 1 -- Agora o aimbot é instantâneo (sem suavização)
 local AntiLagEnabled = false
 local SkyRemoved = false
 local PanelVisible = true
@@ -70,7 +70,7 @@ local function createToggle(yOffset, label, callback)
 end
 
 createToggle(20, "ESP", function(state) ESPEnabled = state end)
-createToggle(60, "Aimbot", function(state) AimbotEnabled = state end) -- Adicionado ao painel
+createToggle(60, "Aimbot", function(state) AimbotEnabled = state end)
 createToggle(100, "No Recoil", function(state) NoRecoilEnabled = state end)
 createToggle(140, "FOV", function(state) FOVSize = state and 150 or 0 end)
 createToggle(180, "Anti-Lag", function(state)
@@ -113,7 +113,41 @@ RunService.RenderStepped:Connect(function()
     FOVCircle.Visible = (FOVSize > 0)
 end)
 
--- *Aimbot Melhorado (Agora mira nos olhos/nariz)*
+-- *Função de ESP*
+local function CreateESP(player)
+    if player == LocalPlayer or ESPs[player] then return end
+
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = Color3.fromRGB(255, 0, 0)
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    
+    player.CharacterAdded:Connect(function(char)
+        highlight.Parent = char
+    end)
+    
+    if player.Character then
+        highlight.Parent = player.Character
+    end
+
+    ESPs[player] = highlight
+end
+
+local function UpdateESP()
+    if not ESPEnabled then return end
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            if not ESPs[player] then
+                CreateESP(player)
+            end
+        end
+    end
+end
+
+RunService.RenderStepped:Connect(UpdateESP)
+
+-- *Aimbot Melhorado (Mira Instantânea)*
 local function GetClosestPlayer()
     local closestPlayer = nil
     local shortestDistance = FOVSize
@@ -128,7 +162,7 @@ local function GetClosestPlayer()
                 local Distance = (Vector2.new(ScreenPosition.X, ScreenPosition.Y) - MousePos).Magnitude
 
                 if Distance < shortestDistance then
-                    closestPlayer = Head.Position -- Ajustado para pegar a cabeça/nariz/olhos
+                    closestPlayer = Head.Position -- Agora mira diretamente na cabeça
                     shortestDistance = Distance
                 end
             end
@@ -143,11 +177,7 @@ RunService.RenderStepped:Connect(function()
     local targetPosition = GetClosestPlayer()
     
     if targetPosition then
-        local CameraPosition = Camera.CFrame.Position
-        local Direction = (targetPosition - CameraPosition).unit
-        local NewCFrame = CFrame.new(CameraPosition, CameraPosition + Direction)
-
-        -- Agora a suavização está mais rápida para um movimento mais preciso
-        Camera.CFrame = Camera.CFrame:Lerp(NewCFrame, AimSmoothness * 0.1) -- Acelerei o movimento
+        -- Mira instantaneamente
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPosition)
     end
 end)
