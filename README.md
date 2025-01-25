@@ -7,34 +7,13 @@ local Camera = workspace.CurrentCamera
 
 local ESPs = {}
 local ESPEnabled = true
-local AimbotEnabled = true
+local AimbotEnabled = false -- Começa desativado
 local NoRecoilEnabled = true
 local FOVSize = 150
 local AimSmoothness = 5
 local AntiLagEnabled = false
 local SkyRemoved = false
 local PanelVisible = true
-
--- *Anti-LSG / Anti-Lag*
-local function removeTexturesFromObject(obj)
-    for _, descendant in pairs(obj:GetDescendants()) do
-        if descendant:IsA("Texture") or descendant:IsA("Decal") then
-            if not descendant.Parent:IsA("Tool") then -- Não remove texturas de armas
-                descendant:Destroy()
-            end
-        end
-    end
-end
-
-local function removeTexturesFromAllObjects()
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if obj:IsA("Tool") then
-            -- Não remove texturas de armas
-        elseif obj:IsA("MeshPart") or obj:IsA("Part") then
-            removeTexturesFromObject(obj)
-        end
-    end
-end
 
 -- *Painel Futurista*
 local ScreenGui = Instance.new("ScreenGui")
@@ -91,7 +70,7 @@ local function createToggle(yOffset, label, callback)
 end
 
 createToggle(20, "ESP", function(state) ESPEnabled = state end)
-createToggle(60, "Aimbot", function(state) AimbotEnabled = state end)
+createToggle(60, "Aimbot", function(state) AimbotEnabled = state end) -- Adicionado ao painel
 createToggle(100, "No Recoil", function(state) NoRecoilEnabled = state end)
 createToggle(140, "FOV", function(state) FOVSize = state and 150 or 0 end)
 createToggle(180, "Anti-Lag", function(state)
@@ -107,7 +86,6 @@ createToggle(180, "Anti-Lag", function(state)
             SkyRemoved = true
         end
         Lighting.Ambient = Color3.new(0, 0, 0)
-        removeTexturesFromAllObjects()
     end
 end)
 
@@ -135,38 +113,6 @@ RunService.RenderStepped:Connect(function()
     FOVCircle.Visible = (FOVSize > 0)
 end)
 
--- *Criar ESP*
-local function CreateESP(player)
-    if player == LocalPlayer or ESPs[player] then return end
-
-    local highlight = Instance.new("Highlight")
-    highlight.FillColor = Color3.fromRGB(255, 0, 0)
-    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    
-    player.CharacterAdded:Connect(function(char)
-        highlight.Parent = char
-    end)
-    
-    if player.Character then
-        highlight.Parent = player.Character
-    end
-
-    ESPs[player] = highlight
-end
-
-local function UpdateESP()
-    if not ESPEnabled then return end
-
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            if not ESPs[player] then
-                CreateESP(player)
-            end
-        end
-    end
-end
-
 -- *Aimbot Melhorado*
 local function GetClosestPlayer()
     local closestPlayer = nil
@@ -191,4 +137,17 @@ local function GetClosestPlayer()
     return closestPlayer
 end
 
-RunService.RenderStepped:Connect(UpdateESP)
+RunService.RenderStepped:Connect(function()
+    if not AimbotEnabled then return end
+    
+    local targetPosition = GetClosestPlayer()
+    
+    if targetPosition then
+        local CameraPosition = Camera.CFrame.Position
+        local Direction = (targetPosition - CameraPosition).unit
+        local NewCFrame = CFrame.new(CameraPosition, CameraPosition + Direction)
+
+        -- Suavizar a movimentação para evitar travamentos
+        Camera.CFrame = Camera.CFrame:Lerp(NewCFrame, 1 / AimSmoothness)
+    end
+end)
