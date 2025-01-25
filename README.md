@@ -15,6 +15,40 @@ local AntiLagEnabled = false
 local SkyRemoved = false
 local PanelVisible = true
 
+-- Função para remover texturas de objetos (armas e partes)
+local function removeTexturesFromObject(object)
+    -- Remove qualquer textura ou decal do objeto
+    for _, descendant in pairs(object:GetDescendants()) do
+        if descendant:IsA("Texture") or descendant:IsA("Decal") then
+            descendant:Destroy()  -- Remover a textura ou decal
+        end
+    end
+end
+
+-- Função para remover texturas de armas do personagem
+local function removeTexturesFromWeapons()
+    -- Remover texturas de armas e ferramentas do personagem
+    local character = LocalPlayer.Character
+    if character then
+        for _, tool in pairs(character:GetChildren()) do
+            if tool:IsA("Tool") then
+                removeTexturesFromObject(tool)
+            end
+        end
+    end
+end
+
+-- Função para remover texturas de todos os objetos no jogo (exceto o personagem)
+local function removeTexturesFromAllObjects()
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("Tool") then
+            removeTexturesFromObject(obj)
+        elseif obj:IsA("MeshPart") or obj:IsA("Part") then
+            removeTexturesFromObject(obj)
+        end
+    end
+end
+
 -- Criar GUI do Painel Futurista
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Parent = game.CoreGui
@@ -76,51 +110,17 @@ createToggle(140, "FOV", function(state) FOVSize = state and 150 or 0 end)
 createToggle(180, "Anti-Lag", function(state) 
     AntiLagEnabled = state
     if AntiLagEnabled then
-        -- Remover Texturas e Decais
         for _, obj in pairs(workspace:GetDescendants()) do
             if obj:IsA("Texture") or obj:IsA("Decal") then
                 obj:Destroy()
-            elseif obj:IsA("MeshPart") or obj:IsA("Part") then
-                obj.Material = Enum.Material.SmoothPlastic
-                obj.Reflectance = 0
-                if obj.Size.Magnitude < 1 then  -- Remove peças pequenas invisíveis
-                    obj:Destroy()
-                end
-            elseif obj:IsA("ParticleEmitter") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
-                obj.Enabled = false  -- Desativa partículas
             end
         end
-
-        -- Remover Texturas e Decais dos personagens
-        for _, player in pairs(Players:GetPlayers()) do
-            if player.Character then
-                for _, obj in pairs(player.Character:GetDescendants()) do
-                    if obj:IsA("Texture") or obj:IsA("Decal") then
-                        obj:Destroy()
-                    elseif obj:IsA("MeshPart") or obj:IsA("Part") then
-                        obj.Material = Enum.Material.SmoothPlastic
-                        obj.Reflectance = 0
-                        obj.Color = Color3.fromRGB(200, 200, 200)
-                    end
-                end
-            end
-        end
-
-        -- Remover Efeitos Gráficos Pesados
         if not SkyRemoved and Lighting:FindFirstChildOfClass("Sky") then
             Lighting:FindFirstChildOfClass("Sky"):Destroy()
             SkyRemoved = true
         end
-        
-        -- Configuração do Modo Massinha 3.0
         Lighting.Ambient = Color3.new(0, 0, 0)
-        Lighting.Brightness = 2
-        Lighting.FogEnd = 100000
-        Lighting.GlobalShadows = false
-        Lighting.OutdoorAmbient = Color3.new(0, 0, 0)
-        Lighting.ShadowSoftness = 0
-        Lighting.EnvironmentSpecularScale = 0
-        Lighting.EnvironmentDiffuseScale = 0
+        removeTexturesFromAllObjects()  -- Remover texturas de todos os objetos
     end
 end)
 
