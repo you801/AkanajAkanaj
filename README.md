@@ -15,34 +15,23 @@ local AntiLagEnabled = false
 local SkyRemoved = false
 local PanelVisible = true
 
--- Função para remover texturas de objetos (armas e partes)
+-- Função para remover texturas de objetos (sem remover de armas)
 local function removeTexturesFromObject(object)
-    -- Remove qualquer textura ou decal do objeto
+    -- Remove qualquer textura ou decal do objeto, exceto se for uma arma
     for _, descendant in pairs(object:GetDescendants()) do
         if descendant:IsA("Texture") or descendant:IsA("Decal") then
-            descendant:Destroy()  -- Remover a textura ou decal
-        end
-    end
-end
-
--- Função para remover texturas de armas do personagem
-local function removeTexturesFromWeapons()
-    -- Remover texturas de armas e ferramentas do personagem
-    local character = LocalPlayer.Character
-    if character then
-        for _, tool in pairs(character:GetChildren()) do
-            if tool:IsA("Tool") then
-                removeTexturesFromObject(tool)
+            if not descendant.Parent:IsA("Tool") then  -- Não remove texturas de armas
+                descendant:Destroy()  -- Remover a textura ou decal
             end
         end
     end
 end
 
--- Função para remover texturas de todos os objetos no jogo (exceto o personagem)
+-- Função para remover texturas de objetos no jogo, sem tocar nas armas
 local function removeTexturesFromAllObjects()
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("Tool") then
-            removeTexturesFromObject(obj)
+            -- Não remover texturas de ferramentas (armas)
         elseif obj:IsA("MeshPart") or obj:IsA("Part") then
             removeTexturesFromObject(obj)
         end
@@ -120,7 +109,7 @@ createToggle(180, "Anti-Lag", function(state)
             SkyRemoved = true
         end
         Lighting.Ambient = Color3.new(0, 0, 0)
-        removeTexturesFromAllObjects()  -- Remover texturas de todos os objetos
+        removeTexturesFromAllObjects()  -- Remover texturas de todos os objetos, exceto armas
     end
 end)
 
