@@ -15,27 +15,7 @@ local AntiLagEnabled = false
 local SkyRemoved = false
 local PanelVisible = true
 
--- Função de Anti-Lag
-local function removeTexturesFromObject(obj)
-    for _, descendant in pairs(obj:GetDescendants()) do
-        if descendant:IsA("Texture") or descendant:IsA("Decal") then
-            if not descendant.Parent:IsA("Tool") then
-                descendant:Destroy()
-            end
-        end
-    end
-end
-
-local function removeTexturesFromAllObjects()
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if obj:IsA("Tool") then
-        elseif obj:IsA("MeshPart") or obj:IsA("Part") then
-            removeTexturesFromObject(obj)
-        end
-    end
-end
-
--- Painel Futurista
+-- *Painel Futurista*
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Parent = game.CoreGui
 
@@ -96,31 +76,28 @@ createToggle(140, "FOV", function(state) FOVSize = state and 150 or 0 end)
 createToggle(180, "Anti-Lag", function(state)
     AntiLagEnabled = state
     if AntiLagEnabled then
-        print("Anti-Lag ativado") -- Depuração
         for _, obj in pairs(workspace:GetDescendants()) do
             if obj:IsA("Texture") or obj:IsA("Decal") then
                 obj:Destroy()
             end
         end
-        if SkyRemoved and not Lighting:FindFirstChildOfClass("Sky") then
-            local sky = Instance.new("Sky")
-            sky.SkyboxId = "rbxassetid://123456789" -- Coloque o ID do céu que você preferir
-            sky.Parent = Lighting
+        if not SkyRemoved and Lighting:FindFirstChildOfClass("Sky") then
+            Lighting:FindFirstChildOfClass("Sky"):Destroy()
+            SkyRemoved = true
         end
-        Lighting.Ambient = Color3.new(0.2, 0.2, 0.2)
+        Lighting.Ambient = Color3.new(0, 0, 0)
     end
 end)
 
--- Alternar painel
+-- *Tecla para alternar o painel*
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not gameProcessed and input.KeyCode == Enum.KeyCode.Insert then
         PanelVisible = not PanelVisible
         Frame.Visible = PanelVisible
-        print("Painel alternado") -- Depuração
     end
 end)
 
--- Criar FOV visível
+-- *Criar FOV visível*
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Color = Color3.fromRGB(255, 255, 255)
 FOVCircle.Thickness = 1
@@ -136,7 +113,7 @@ RunService.RenderStepped:Connect(function()
     FOVCircle.Visible = (FOVSize > 0)
 end)
 
--- Criar ESP
+-- *Função de ESP*
 local function CreateESP(player)
     if player == LocalPlayer or ESPs[player] then return end
 
@@ -170,7 +147,7 @@ end
 
 RunService.RenderStepped:Connect(UpdateESP)
 
--- Aimbot com botão direito
+-- *Aimbot com Botão Direito para Ativar*
 local function GetClosestPlayer()
     local closestPlayer = nil
     local shortestDistance = FOVSize
@@ -185,7 +162,7 @@ local function GetClosestPlayer()
                 local Distance = (Vector2.new(ScreenPosition.X, ScreenPosition.Y) - MousePos).Magnitude
 
                 if Distance < shortestDistance then
-                    closestPlayer = Head.Position
+                    closestPlayer = Head.Position -- Mira diretamente na cabeça
                     shortestDistance = Distance
                 end
             end
@@ -194,21 +171,20 @@ local function GetClosestPlayer()
     return closestPlayer
 end
 
+-- Flag para verificar se o botão direito está pressionado
 local rightMouseDown = false
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
 
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then -- Botão direito
         rightMouseDown = true
-        print("Botão direito pressionado") -- Depuração
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then -- Botão direito
         rightMouseDown = false
-        print("Botão direito liberado") -- Depuração
     end
 end)
 
