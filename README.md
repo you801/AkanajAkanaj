@@ -1,29 +1,4 @@
-[01:59, 22/01/2025] João Lucas: local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local Lighting = game:GetService("Lighting")
-local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
-
-local ESPs = {}
-local ESPEnabled = false
-local AimbotEnabled = false
-local NoRecoilEnabled = false
-local FOVSize = 150
-local AimSmoothness = 5
-local AntiLagEnabled = false
-local SkyRemoved = false
-local PanelVisible = true
-
--- Criar GUI do Painel Futurista
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Parent = game.CoreGui
-
-local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 250, 0, 250)
-Frame.Position = UDim2.new(0.05, 0, 0.2, 0)
-Frame.BackgroundColor3 = Color3.fromR…
-[02:32, 22/01/2025] Gabriel Armando: local Players = game:GetService("Players")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
@@ -40,6 +15,26 @@ local AntiLagEnabled = false
 local SkyRemoved = false
 local PanelVisible = true
 
+-- Função para remover texturas de objetos (exceto armas)
+local function removeTexturesFromObject(object)
+    for _, descendant in pairs(object:GetDescendants()) do
+        if descendant:IsA("Texture") or descendant:IsA("Decal") then
+            if not descendant.Parent:IsA("Tool") then -- Não remove texturas de armas
+                descendant:Destroy()
+            end
+        end
+    end
+end
+
+-- Função para remover texturas de objetos no jogo
+local function removeTexturesFromAllObjects()
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if not obj:IsA("Tool") and (obj:IsA("MeshPart") or obj:IsA("Part")) then
+            removeTexturesFromObject(obj)
+        end
+    end
+end
+
 -- Criar GUI do Painel Futurista
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Parent = game.CoreGui
@@ -47,224 +42,140 @@ ScreenGui.Parent = game.CoreGui
 local Frame = Instance.new("Frame")
 Frame.Size = UDim2.new(0, 250, 0, 250)
 Frame.Position = UDim2.new(0.05, 0, 0.2, 0)
-Frame.BackgroundColor3 = Color3.fromRGB(…
-[10:17, 22/01/2025] João Lucas: Olha o discord abobando
-[21:14, 24/01/2025] João Lucas: Jogadores locais = jogo:GetService("Jogadores")
-local RunService = jogo:GetService("RunService")
-local UserInputService = jogo:GetService("UserInputService")
-Iluminação local = jogo:GetService("Iluminação")
-local LocalPlayer = Jogadores.LocalPlayer
-Câmera local = workspace.CurrentCamera
+Frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame.BackgroundTransparency = 0.2
+Frame.BorderSizePixel = 0
+Frame.Parent = ScreenGui
 
-ESPs locais = {}
-local ESPEnabled = verdadeiro
-AimbotEnabled local = verdadeiro
-local NoRecoilEnabled = verdadeiro
-tamanho do campo de visão local = 150
-local AimSmoothness = 5
-AntiLagEnabled local = falso
-local SkyRemoved = falso
-Painel localVisível = verdadeiro
-
--- Função para remover texturas de objetos (sem remover de armas)
-função local removeTexturesFromObject(objeto)
-    -- Remova qualquer textura ou decalque do objeto, exceto se for uma arma
-    para _, descendente em pares(objeto:GetDescendants()) faça
-        se descendente:IsA("Textura") ou descendente:IsA("Decalque") então
-            se não descendente.Parent:IsA("Tool") then -- Não remove texturas de armas
-                descendant:Destroy() -- Remove textura ou decalque
-            fim
-        fim
-    fim
-fim
-
--- Função para remover texturas de objetos no jogo, sem tocar nas armas
-função local removeTexturesFromAllObjects()
-    para _, obj em pares(workspace:GetDescendants()) faça
-        se obj:IsA("Ferramenta") então
-            -- Não remove texturas de ferramentas (armas)
-        elseif obj:IsA("MeshPart") ou obj:IsA("Part") então
-            removeTexturesFromObject(obj)
-        fim
-    fim
-fim
-
--- Criar GUI do Painel Futurista
-ScreenGui local = Instância.new("ScreenGui")
-ScreenGui.Parent = jogo.CoreGui
-
-Quadro local = Instance.new("Quadro")
-Frame.Size = UDim2.new(0, 250, 0, 250)
-Frame.Posição = UDim2.new(0,05, 0, 0,2, 0)
-Quadro.BackgroundColor3 = Cor3.fromRGB(0, 0, 0)
-Frame.BackgroundTransparência = 0,2
-Quadro.BorderSizePixel = 0
-Frame.Parent = TelaGuia
-
-função local createToggle(yOffset, rótulo, retorno de chamada)
-    local toggleFrame = Instance.new("Quadro")
+-- Função para criar um botão de alternância (toggle)
+local function createToggle(yOffset, label, callback)
+    local toggleFrame = Instance.new("Frame")
     toggleFrame.Size = UDim2.new(0, 50, 0, 25)
-    toggleFrame.Position = UDim2.new(0,75, -25, 0, yOffset)
-    toggleFrame.BackgroundColor3 = Cor3.fromRGB(40, 40, 40)
+    toggleFrame.Position = UDim2.new(0, 75, 0, yOffset)
+    toggleFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     toggleFrame.BorderSizePixel = 0
-    toggleFrame.Parent = Quadro
+    toggleFrame.Parent = Frame
 
-    local toggleButton = Instance.new("Quadro")
+    local toggleButton = Instance.new("Frame")
     toggleButton.Size = UDim2.new(0, 20, 0, 20)
-    toggleButton.Posição = UDim2.novo(0, 2, 0, 2)
-    toggleButton.BackgroundColor3 = Cor3.fromRGB(100, 100, 100)
-    toggleButton.Parent = alternarQuadro
+    toggleButton.Position = UDim2.new(0, 2, 0, 2)
+    toggleButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    toggleButton.Parent = toggleFrame
 
-    textLabel local = Instância.new("TextLabel")
+    local textLabel = Instance.new("TextLabel")
     textLabel.Size = UDim2.new(0, 100, 0, 25)
-    textLabel.Posição = UDim2.new(0, 10, 0, yOffset)
-    textLabel.Text = rótulo
+    textLabel.Position = UDim2.new(0, 10, 0, yOffset)
+    textLabel.Text = label
     textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    textLabel.BackgroundTransparência = 1
-    textLabel.TamanhoDoTexto = 16
-    textLabel.Font = Enum.Fonte.SourceSansBold
-    textLabel.TextXAlignment = Enum.TextXAlignment.Esquerda
-    textLabel.Parent = Quadro
+    textLabel.BackgroundTransparency = 1
+    textLabel.TextSize = 16
+    textLabel.Font = Enum.Font.SourceSansBold
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.Parent = Frame
 
-    local isActive = falso
+    local isActive = false
 
-    toggleFrame.InputBegan:Connect(função(entrada)
-        se input.UserInputType == Enum.UserInputType.MouseButton1 então
-            isActive = não éAtivo
-            se isActive então
-                toggleButton:TweenPosition(UDim2.new(1, -22, 0, 2), "Saída", "Seno", 0.2, verdadeiro)
-                toggleButton.BackgroundColor3 = Cor3.fromRGB(0, 255, 0)
-            outro
-                toggleButton:TweenPosition(UDim2.new(0, 2, 0, 2), "Fora", "Seno", 0.2, verdadeiro)
-                toggleButton.BackgroundColor3 = Cor3.fromRGB(100, 100, 100)
-            fim
-            retorno de chamada(isActive)
-        fim
-    fim)
-fim
+    toggleFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isActive = not isActive
+            if isActive then
+                toggleButton:TweenPosition(UDim2.new(1, -22, 0, 2), "Out", "Sine", 0.2, true)
+                toggleButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+            else
+                toggleButton:TweenPosition(UDim2.new(0, 2, 0, 2), "Out", "Sine", 0.2, true)
+                toggleButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+            end
+            callback(isActive)
+        end
+    end)
+end
 
-createToggle(20, "ESP", função(estado) ESPEnabled = estado fim)
-createToggle(60, "Aimbot", função(estado) AimbotEnabled = estado fim)
-createToggle(100, "Sem recuo", function(state) NoRecoilEnabled = estado final)
-createToggle(140, "FOV", função(estado) FOVSize = estado e 150 ou 0 fim)
-createToggle(180, "Anti-Lag", função(estado)
-    AntiLagEnabled = estado
-    se AntiLagEnabled então
-        para _, obj em pares(workspace:GetDescendants()) faça
-            se obj:IsA("Textura") ou obj:IsA("Decalque") então
-                obj:Destruir()
-            fim
-        fim
-        se não SkyRemoved e Lighting:FindFirstChildOfClass("Sky") então
-            Iluminação:FindFirstChildOfClass("Céu"):Destroy()
-            SkyRemoved = verdadeiro
-        fim
-        Iluminação.Ambiente = Cor3.novo(0, 0, 0)
-        removeTexturesFromAllObjects() -- Remove texturas de todos os objetos, exceto armas
-    fim
-fim)
+-- Criar botões no painel
+createToggle(20, "ESP", function(state) ESPEnabled = state end)
+createToggle(60, "Aimbot", function(state) AimbotEnabled = state end)
+createToggle(100, "No Recoil", function(state) NoRecoilEnabled = state end)
+createToggle(140, "FOV", function(state) FOVSize = state and 150 or 0 end)
+createToggle(180, "Anti-Lag", function(state)
+    AntiLagEnabled = state
+    if AntiLagEnabled then
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("Texture") or obj:IsA("Decal") then
+                obj:Destroy()
+            end
+        end
+        if not SkyRemoved and Lighting:FindFirstChildOfClass("Sky") then
+            Lighting:FindFirstChildOfClass("Sky"):Destroy()
+            SkyRemoved = true
+        end
+        Lighting.Ambient = Color3.new(0, 0, 0)
+        removeTexturesFromAllObjects()
+    end
+end)
 
--- Alternar do painel com a tecla Inserir
-UserInputService.InputBegan:Connect(função(entrada, jogoProcessado)
-    se não for gameProcessed e input.KeyCode == Enum.KeyCode.Insert então
-        PanelVisible = não PanelVisible
-        Frame.Visible = PainelVisível
-    fim
-fim)
-
--- Criar FOV visível
-local FOVCircle = Desenho.new("Círculo")
-FOVCircle.Color = Cor3.fromRGB(255, 255, 255)
-FOVCircle.Espessura = 1
-FOVCircle.NumSides = 50
-FOVCircle.Radius = TamanhoFOV
-FOVCircle.Filled = falso
-FOVCircle.Visible = verdadeiro
-
-RunService.RenderStepped:Connect(função()
-    MousePos local = UserInputService:GetMouseLocation()
-    FOVCircle.Posição = MousePos
-    FOVCircle.Radius = TamanhoFOV
-    FOVCircle.Visible = (FOVSize > 0)
-fim)
+-- Alternar painel com a tecla "Insert"
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.Insert then
+        PanelVisible = not PanelVisible
+        Frame.Visible = PanelVisible
+    end
+end)
 
 -- Criar ESP
-função local CreateESP(jogador)
-    se jogador == LocalPlayer ou ESPs[jogador] então retorne fim
+local function CreateESP(player)
+    if player == LocalPlayer or ESPs[player] then return end
 
-    destaque local = Instance.new("Destaque")
-    destaque.FillColor = Cor3.fromRGB(255, 0, 0)
-    destaque.OutlineColor = Cor3.fromRGB(255, 255, 255)
-    destaque.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    
-    player.CharacterAdded:Connect(função(char)
-        destaque.Parent = char
-    fim)
-    
-    se jogador.Personagem então
-        destaque.Pai = jogador.Personagem
-    fim
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = Color3.fromRGB(255, 0, 0)
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 
-    ESPs[jogador] = destaque
-fim
+    player.CharacterAdded:Connect(function(char)
+        highlight.Parent = char
+    end)
 
-função local UpdateESP()
-    se não ESPEnabled então retorne fim
+    if player.Character then
+        highlight.Parent = player.Character
+    end
 
-    para _, jogador em pares(Players:GetPlayers()) faça
-        se jogador ~= LocalPlayer e jogador.Character então
-            se não ESPs[jogador] então
-                CriarESP(jogador)
-            fim
-        fim
-    fim
-fim
+    ESPs[player] = highlight
+end
+
+-- Atualizar ESP
+local function UpdateESP()
+    if not ESPEnabled then return end
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            if not ESPs[player] then
+                CreateESP(player)
+            end
+        end
+    end
+end
 
 -- Melhor Aimbot
-função local GetClosestPlayer()
-    jogadormaispróximo local = nulo
-    Distância mais curta local = FOVSize
+local function GetClosestPlayer()
+    local closestPlayer = nil
+    local shortestDistance = FOVSize
 
-    para _, jogador em pares(Players:GetPlayers()) faça
-        se jogador ~= LocalPlayer e jogador.Character e jogador.Character:FindFirstChild("HumanoidRootPart") então
-            local Cabeça = jogador.Personagem:FindFirstChild("Cabeça")
-            se Cabeça então
-                Posição da tela local, Na tela = Câmera:WorldToViewportPoint(Cabeça.Posição)
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local Head = player.Character:FindFirstChild("Head")
+            if Head then
+                local screenPosition, onScreen = Camera:WorldToViewportPoint(Head.Position)
+                if onScreen then
+                    local mousePos = UserInputService:GetMouseLocation()
+                    local distance = (Vector2.new(screenPosition.X, screenPosition.Y) - mousePos).Magnitude
+                    if distance < shortestDistance then
+                        closestPlayer = Head.Position
+                        shortestDistance = distance
+                    end
+                end
+            end
+        end
+    end
+    return closestPlayer
+end
 
-                se OnScreen então
-                    MousePos local = UserInputService:GetMouseLocation()
-                    Distância local = (Vector2.new(ScreenPosition.X, ScreenPosition.Y) - MousePos).Magnitude
-
-                    se Distância < shortestDistance então
-                        Jogadormaispróximo = Cabeça.Posição
-                        shortestDistance = Distância
-                    fim
-                fim
-            fim
-        fim
-    fim
-    retornar jogadormaispróximo
-fim
-
-RunService.RenderStepped:Connect(função()
-    AtualizarESP()
-
-    se AimbotEnabled e UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) então
-        targetPos local = ObterJogadorMaisPróximo()
-        se targetPos então
-            local newCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-            lerpSpeed ​​local = math.clamp(0,2 * Suavidade do Objetivo, 0,05, 0,7)
-            Câmera.CFrame = Câmera.CFrame:Lerp(novoCFrame, lerpSpeed)
-        fim
-    fim
-fim)
-
--- Sem recuo
-RunService.RenderStepped:Connect(função()
-    se NoRecoilEnabled então
-        arma local = LocalPlayer.Character e LocalPlayer.Character:FindFirstChildWhichIsA("Ferramenta")
-        se arma e arma:FindFirstChild("Recoil") então
-            arma.Recoil.Value = 0
-        fim
-    fim
-fim)
+RunService.RenderStepped:Connect(function()
+    UpdateESP()
+end)
